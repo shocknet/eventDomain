@@ -61,7 +61,7 @@ var auth_1 = __importDefault(require("./auth"));
 var auth = new auth_1.default();
 var socketsHandler = new sockets_1.default(auth);
 var app = express_1.default();
-var port = 3000;
+var port = 3001;
 var setAccessControlHeaders = function (req, res) {
     res.header("Access-Control-Allow-Origin", "*");
     res.header("Access-Control-Allow-Methods", "OPTIONS,POST,GET,PUT,DELETE");
@@ -110,7 +110,7 @@ app.use(function (req, res, next) {
             return;
         }
         if (err || !response) {
-            return res.status(502);
+            return res.sendStatus(502);
         }
         if (response.result === 'error') {
             return res.status(502).write(response.message || '');
@@ -169,6 +169,7 @@ io.of(function (name, auth, next) {
     console.log(auth);
     next(null, true); // or false, when the creation is denied
 }).on("connection", function (socket) {
+    console.log("new connection from main" + socket.nsp.name);
     socketsHandler.addSocket(socket);
 });
 io.on("connection", function (socket) {

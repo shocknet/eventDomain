@@ -88,7 +88,7 @@ var Handler = /** @class */ (function () {
         };
         this.receiversSockets[relayId].emit('relay:internal:newSocket', newSocketMessage);
         socket.onAny(function (eventName, eventBody, callback) {
-            console.log("propagating: " + eventName);
+            //console.log("propagating: "+eventName)
             var queryId = uuid_1.v1();
             var message = {
                 type: 'socketEvent',
@@ -156,7 +156,10 @@ var Handler = /** @class */ (function () {
                 //socket.disconnect()
                 return;
             }
-            console.log("got backward on " + body.namespace + " for " + body.eventName);
+            //console.log(`got backward on ${body.namespace} for ${body.eventName}`)
+            if (!_this.sendersSockets[relayId] || !_this.sendersSockets[relayId][body.namespace]) {
+                return;
+            }
             // TODO counter and notify if no one is listening
             var sent = 0;
             for (var i = 0; i < _this.sendersSockets[relayId][body.namespace].length; i++) {
@@ -164,7 +167,7 @@ var Handler = /** @class */ (function () {
                     console.log("nopping");
                     return;
                 }
-                console.log("emitting to client: " + body.eventName);
+                //console.log("emitting to client: "+body.eventName)
                 _this.sendersSockets[relayId][body.namespace][i].emit(body.eventName, body.eventBody);
                 sent++;
             }
@@ -208,11 +211,12 @@ var Handler = /** @class */ (function () {
         if (!this.httpCallbacks[relayId]) {
             this.httpCallbacks[relayId] = {};
         }
-        if (!this.receiversSockets[relayId] || !this.receiversSockets[relayId].connected) {
+        if (!this.receiversSockets[relayId] /*|| !this.receiversSockets[relayId].connected*/) {
             cb({
                 type: 'error',
                 message: ''
             }, null);
+            return;
         }
         var httpReqMessage = {
             type: 'httpRequest',

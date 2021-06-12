@@ -10,7 +10,7 @@ import { httpRequestInfo } from './types'
 const auth = new Auth()
 const socketsHandler = new SocketsHandler(auth)
 const app = express()
-const port = 3000
+const port = 3001
 
 const setAccessControlHeaders = (req:any, res:any) => {
     res.header("Access-Control-Allow-Origin", "*");
@@ -65,7 +65,7 @@ app.use(function (req, res, next) {
             return
         }
         if(err || !response){
-            return res.status(502)
+            return res.sendStatus(502)
         }
         if(response.result === 'error'){
             return res.status(502).write(response.message || '')
@@ -116,6 +116,7 @@ io.of((name, auth, next) => {
     console.log(auth)
     next(null, true); // or false, when the creation is denied
 }).on("connection",socket => {
+    console.log("new connection from main"+socket.nsp.name)
     socketsHandler.addSocket(socket)
 })
 io.on("connection",socket => {

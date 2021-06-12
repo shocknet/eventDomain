@@ -33,7 +33,6 @@ export default class Handler {
     }
 
     addViewerSocket(socket:Socket){
-        
         socket.once("hybridRelayId", body =>{
             if(!body || !body.id){
                 socket.emit("relay:error",{type:'error',message:''})
@@ -68,7 +67,7 @@ export default class Handler {
         } 
         this.receiversSockets[relayId].emit('relay:internal:newSocket',newSocketMessage)
         socket.onAny((eventName:string,eventBody:any,callback:(err:any,res:any)=>void) =>{
-            console.log("propagating: "+eventName)
+            //console.log("propagating: "+eventName)
             const queryId = v1()
             const message:RelayMessageEvent = {
                 type:'socketEvent',
@@ -125,7 +124,10 @@ export default class Handler {
                 //socket.disconnect()
                 return
             }
-            console.log(`got backward on ${body.namespace} for ${body.eventName}`)
+            //console.log(`got backward on ${body.namespace} for ${body.eventName}`)
+            if(!this.sendersSockets[relayId] || !this.sendersSockets[relayId][body.namespace]){
+                return
+            }
             // TODO counter and notify if no one is listening
             let sent = 0
             for(let i = 0;i<this.sendersSockets[relayId][body.namespace].length;i++){
@@ -133,10 +135,10 @@ export default class Handler {
                     console.log("nopping")
                     return
                 }
-                console.log("emitting to client: "+body.eventName)
+                //console.log("emitting to client: "+body.eventName)
                 this.sendersSockets[relayId][body.namespace][i].emit(body.eventName,body.eventBody)
                 sent++
-            } 
+            }
             
         })
         socket.on('relay:internal:httpResponse',(body:RelayMessageHttpResponse) =>{
@@ -180,11 +182,12 @@ export default class Handler {
             this.httpCallbacks[relayId] = {}
         }
         
-        if(!this.receiversSockets[relayId] || !this.receiversSockets[relayId].connected){
+        if(!this.receiversSockets[relayId] /*|| !this.receiversSockets[relayId].connected*/){
             cb({
                 type:'error',
                 message:''
             }, null)
+            return
         }
 
         const httpReqMessage:RelayMessageHttpRequest = {
