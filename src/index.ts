@@ -10,7 +10,7 @@ import { httpRequestInfo } from './types'
 const auth = new Auth()
 const socketsHandler = new SocketsHandler(auth)
 const app = express()
-const port = 3001
+const port = process.argv[2] || 3001
 
 const setAccessControlHeaders = (req:any, res:any) => {
     res.header("Access-Control-Allow-Origin", "*");
