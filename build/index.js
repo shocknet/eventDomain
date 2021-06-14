@@ -58,10 +58,12 @@ var uuid_1 = require("uuid");
 var socket_io_msgpack_parser_1 = __importDefault(require("socket.io-msgpack-parser"));
 var sockets_1 = __importDefault(require("./sockets"));
 var auth_1 = __importDefault(require("./auth"));
+var health_1 = __importDefault(require("./health"));
 var auth = new auth_1.default();
 var socketsHandler = new sockets_1.default(auth);
+var healthHandler = new health_1.default(socketsHandler, 60 * 1000, 500);
 var app = express_1.default();
-var port = 3001;
+var port = process.argv[2] || 3001;
 var setAccessControlHeaders = function (req, res) {
     res.header("Access-Control-Allow-Origin", "*");
     res.header("Access-Control-Allow-Methods", "OPTIONS,POST,GET,PUT,DELETE");
@@ -144,6 +146,26 @@ app.post('/reservedHybridRelayCreate', function (req, res) { return __awaiter(vo
         }
     });
 }); });
+app.get('/reservedHybridRelayHealthz', function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
+    var stats, e_2;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 2, , 3]);
+                return [4 /*yield*/, healthHandler.readStoredStatuses()];
+            case 1:
+                stats = _a.sent();
+                res.json(stats);
+                return [3 /*break*/, 3];
+            case 2:
+                e_2 = _a.sent();
+                console.error(e_2);
+                res.sendStatus(500);
+                return [3 /*break*/, 3];
+            case 3: return [2 /*return*/];
+        }
+    });
+}); });
 var httpServer = http_1.default.createServer(app);
 var io = new socket_io_1.Server(httpServer, {
     parser: socket_io_msgpack_parser_1.default,
@@ -176,6 +198,7 @@ io.on("connection", function (socket) {
     socketsHandler.addSocket(socket);
 });
 var Start = function () {
+    healthHandler.startHealthInterval();
     httpServer.listen(port, function () {
         console.log("Example app listening at http://localhost:" + port);
     });

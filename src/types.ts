@@ -79,3 +79,13 @@ export type RelayMessage = RelayMessageHttpRequest |
     RelayMessageDisconnected | 
     RelayErrorMessage | 
     RelayMessageSocketAck
+
+export type StatusStoredObject = {
+    clientsNumbers:{
+        eDClients: number
+        webClients: number
+    }
+    percentCpu:number
+    memoryBytes:number
+    checkTime:number
+}

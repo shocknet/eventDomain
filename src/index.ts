@@ -6,9 +6,12 @@ import {v1} from 'uuid'
 import binaryParser from 'socket.io-msgpack-parser'
 import SocketsHandler from './sockets'
 import Auth from './auth'
+import Health from './health'
 import { httpRequestInfo } from './types'
 const auth = new Auth()
 const socketsHandler = new SocketsHandler(auth)
+const healthHandler = new Health(socketsHandler,60*1000,500) 
+
 const app = express()
 const port = process.argv[2] || 3001
 
@@ -89,6 +92,15 @@ app.post('/reservedHybridRelayCreate',async (req,res) => {
     }
 })
 
+app.get('/reservedHybridRelayHealthz',async (req,res) => {
+    try {
+        const stats = await healthHandler.readStoredStatuses()
+        res.json(stats)
+    }catch(e){
+        console.error(e)
+        res.sendStatus(500)
+    }
+})
 
 const httpServer = Http.createServer(app)
 const io = new Server(httpServer,{
@@ -125,7 +137,7 @@ io.on("connection",socket => {
 
 
 const Start = () => {
-    
+    healthHandler.startHealthInterval()
     httpServer.listen(port, () => {
         console.log(`Example app listening at http://localhost:${port}`)
     })
