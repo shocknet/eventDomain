@@ -89,3 +89,8 @@ export type StatusStoredObject = {
     memoryBytes:number
     checkTime:number
 }
+
+export type ExistingSockets = {
+    namespace: string
+    deviceId: string
+}

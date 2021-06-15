@@ -114,8 +114,8 @@ var Handler = /** @class */ (function () {
     };
     Handler.prototype.addReceiverSocket = function (socket) {
         var _this = this;
-        socket.once("hybridRelayToken", function (body) { return __awaiter(_this, void 0, void 0, function () {
-            var token, relayId, ok, e_1;
+        socket.once("hybridRelayToken", function (body, ack) { return __awaiter(_this, void 0, void 0, function () {
+            var token, relayId, ok, connectedSockets_1, e_1;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -136,6 +136,17 @@ var Handler = /** @class */ (function () {
                             socket.disconnect();
                             return [2 /*return*/];
                         }
+                        connectedSockets_1 = [];
+                        Object.entries(this.sendersSockets[relayId] || {}).forEach(function (_a) {
+                            var namespace = _a[0], sockets = _a[1];
+                            sockets.forEach(function (socket) {
+                                connectedSockets_1.push({
+                                    deviceId: socket.handshake.auth.encryptionId,
+                                    namespace: namespace
+                                });
+                            });
+                        });
+                        ack(connectedSockets_1);
                         this.placeReceiverSocket(relayId, socket);
                         return [3 /*break*/, 4];
                     case 3:

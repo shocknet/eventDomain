@@ -3,6 +3,7 @@ import type {Socket} from 'socket.io'
 import {v1} from 'uuid'
 import Auth from './auth'
 import { 
+    ExistingSockets,
     httpRequestInfo, 
     RelayErrorMessage, 
     RelayMessageEvent, 
@@ -94,7 +95,7 @@ export default class Handler {
 
 
     addReceiverSocket(socket:Socket){
-        socket.once("hybridRelayToken", async body => {
+        socket.once("hybridRelayToken", async (body, ack:(sockets:ExistingSockets[])=>void) => {
             if(!body || !body.token || !body.id){
                 socket.emit("relay:internal:error",{type:'error',message:''})
                 socket.disconnect()
@@ -108,6 +109,16 @@ export default class Handler {
                     socket.disconnect()
                     return
                 }
+                const connectedSockets:ExistingSockets[] = []
+                Object.entries(this.sendersSockets[relayId] || {}).forEach(([namespace,sockets])=>{
+                    sockets.forEach(socket =>{
+                        connectedSockets.push({
+                            deviceId:socket.handshake.auth.encryptionId,
+                            namespace
+                        })
+                    })
+                })
+                ack(connectedSockets)
                 this.placeReceiverSocket(relayId,socket)
             } catch(e) {
                 socket.emit("relay:error",{type:'error',message:''})
