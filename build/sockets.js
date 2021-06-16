@@ -38,12 +38,13 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 Object.defineProperty(exports, "__esModule", { value: true });
 var uuid_1 = require("uuid");
 var Handler = /** @class */ (function () {
-    function Handler(authHelper) {
+    function Handler(authHelper, version) {
         this.receiversSockets = {};
         this.sendersSockets = {};
         this.httpCallbacks = {};
         this.socketCallbacks = {};
         this.auth = authHelper;
+        this.currentVersion = version;
     }
     Handler.prototype.addSocket = function (socket) {
         var namespace = socket.nsp.name;
@@ -78,13 +79,17 @@ var Handler = /** @class */ (function () {
         }
         var namespace = socket.nsp.name;
         if (!this.sendersSockets[relayId][namespace]) {
-            this.sendersSockets[relayId][namespace] = [];
+            this.sendersSockets[relayId][namespace] = {};
         }
-        this.sendersSockets[relayId][namespace].push(socket);
+        var deviceId = socket.handshake.auth.encryptionId;
+        if (!this.sendersSockets[relayId][namespace][deviceId]) {
+            this.sendersSockets[relayId][namespace][deviceId] = [];
+        }
+        this.sendersSockets[relayId][namespace][deviceId].push(socket);
         var newSocketMessage = {
             type: 'socketNew',
             namespace: namespace,
-            deviceId: socket.handshake.auth.encryptionId
+            deviceId: deviceId
         };
         this.receiversSockets[relayId].emit('relay:internal:newSocket', newSocketMessage);
         socket.onAny(function (eventName, eventBody, callback) {
@@ -96,7 +101,8 @@ var Handler = /** @class */ (function () {
                 eventBody: eventBody,
                 namespace: namespace,
                 queryCallbackId: queryId,
-                socketCallbackId: socket.id
+                socketCallbackId: socket.id,
+                deviceId: deviceId
             };
             if (!_this.socketCallbacks[socket.id]) {
                 _this.socketCallbacks[socket.id] = {};
@@ -105,9 +111,9 @@ var Handler = /** @class */ (function () {
             _this.receiversSockets[relayId].emit('relay:internal:messageForward', message);
         });
         socket.on('disconnect', function () {
-            var socketIndex = _this.sendersSockets[relayId][namespace].indexOf(socket);
+            var socketIndex = _this.sendersSockets[relayId][namespace][deviceId].indexOf(socket);
             if (socketIndex !== -1) {
-                _this.sendersSockets[relayId][namespace].splice(socketIndex, 1);
+                _this.sendersSockets[relayId][namespace][deviceId].splice(socketIndex, 1);
             }
             delete _this.socketCallbacks[socket.id];
         });
@@ -115,16 +121,21 @@ var Handler = /** @class */ (function () {
     Handler.prototype.addReceiverSocket = function (socket) {
         var _this = this;
         socket.once("hybridRelayToken", function (body, ack) { return __awaiter(_this, void 0, void 0, function () {
-            var token, relayId, ok, connectedSockets_1, e_1;
+            var token, relayId, version, ok, connectedSockets_1, e_1;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        if (!body || !body.token || !body.id) {
-                            socket.emit("relay:internal:error", { type: 'error', message: '' });
+                        if (!body || !body.token || !body.id || !body.version) {
+                            socket.emit("relay:internal:error", { type: 'error', message: 'invalid token' });
                             socket.disconnect();
                             return [2 /*return*/];
                         }
-                        token = body.token, relayId = body.id;
+                        token = body.token, relayId = body.id, version = body.version;
+                        if (this.currentVersion !== version) {
+                            socket.emit("relay:internal:error", { type: 'error', message: 'invalid version' });
+                            socket.disconnect();
+                            return [2 /*return*/];
+                        }
                         _a.label = 1;
                     case 1:
                         _a.trys.push([1, 3, , 4]);
@@ -138,12 +149,15 @@ var Handler = /** @class */ (function () {
                         }
                         connectedSockets_1 = [];
                         Object.entries(this.sendersSockets[relayId] || {}).forEach(function (_a) {
-                            var namespace = _a[0], sockets = _a[1];
-                            sockets.forEach(function (socket) {
-                                connectedSockets_1.push({
-                                    deviceId: socket.handshake.auth.encryptionId,
-                                    namespace: namespace
-                                });
+                            var namespace = _a[0], socketDevices = _a[1];
+                            Object.entries(socketDevices || {}).forEach(function (_a) {
+                                var deviceId = _a[0], sockets = _a[1];
+                                if (sockets.find(function (socket) { return socket.connected; })) {
+                                    connectedSockets_1.push({
+                                        deviceId: deviceId,
+                                        namespace: namespace
+                                    });
+                                }
                             });
                         });
                         ack(connectedSockets_1);
@@ -168,18 +182,20 @@ var Handler = /** @class */ (function () {
                 return;
             }
             //console.log(`got backward on ${body.namespace} for ${body.eventName}`)
-            if (!_this.sendersSockets[relayId] || !_this.sendersSockets[relayId][body.namespace]) {
+            if (!_this.sendersSockets[relayId] ||
+                !_this.sendersSockets[relayId][body.namespace] ||
+                !_this.sendersSockets[relayId][body.namespace][body.deviceId]) {
                 return;
             }
             // TODO counter and notify if no one is listening
             var sent = 0;
-            for (var i = 0; i < _this.sendersSockets[relayId][body.namespace].length; i++) {
-                if (!_this.sendersSockets[relayId][body.namespace][i]) {
+            for (var i = 0; i < _this.sendersSockets[relayId][body.namespace][body.deviceId].length; i++) {
+                if (!_this.sendersSockets[relayId][body.namespace][body.deviceId][i]) {
                     console.log("nopping");
                     return;
                 }
                 //console.log("emitting to client: "+body.eventName)
-                _this.sendersSockets[relayId][body.namespace][i].emit(body.eventName, body.eventBody);
+                _this.sendersSockets[relayId][body.namespace][body.deviceId][i].emit(body.eventName, body.eventBody);
                 sent++;
             }
         });

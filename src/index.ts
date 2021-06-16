@@ -8,8 +8,10 @@ import SocketsHandler from './sockets'
 import Auth from './auth'
 import Health from './health'
 import { httpRequestInfo } from './types'
+
+const CURRENT_ED_VERSION = 1
 const auth = new Auth()
-const socketsHandler = new SocketsHandler(auth)
+const socketsHandler = new SocketsHandler(auth,CURRENT_ED_VERSION)
 const healthHandler = new Health(socketsHandler,60*1000,500) 
 
 const app = express()

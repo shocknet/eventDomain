@@ -49,6 +49,7 @@ export type RelayMessageEvent = {
     eventBody:string
     queryCallbackId:string
     socketCallbackId:string
+    deviceId:string
 }
 export type RelayMessageNewSocket = {
     type:'socketNew'
@@ -56,8 +57,9 @@ export type RelayMessageNewSocket = {
     deviceId:string
 }
 export type RelayMessageDisconnected = {
-    type:'socketNew'
+    type:'disconnected'
     namespace:string
+    deviceId:string
 }
 
 export type RelayErrorMessage = {

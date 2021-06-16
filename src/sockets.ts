@@ -13,13 +13,15 @@ import {
     RelayMessageSocketAck 
 } from './types'
 export default class Handler {
-    constructor(authHelper:Auth){
+    constructor(authHelper:Auth,version:number){
         this.auth = authHelper
+        this.currentVersion = version
     }
+    currentVersion:number
     auth:Auth
     receiversSockets:Record<string/*relayId*/,Socket> = {}
 
-    sendersSockets:Record<string/*relayId*/,Record<string/*namespace*/,Socket[]>> = {}
+    sendersSockets:Record<string/*relayId*/,Record<string/*namespace*/,Record<string/*deviceId*/,Socket[]>>> = {}
 
     httpCallbacks:Record<string/*relayId*/,Record<string/*requestId*/,(err:RelayErrorMessage|null,res:RelayMessageHttpResponse|null)=>void>> = {}
     socketCallbacks:Record<string/*socketId*/,Record<string/*requestId*/,(err:any,res:any)=>void>> = {}
@@ -58,13 +60,17 @@ export default class Handler {
         }
         const {name:namespace} = socket.nsp
         if(!this.sendersSockets[relayId][namespace]){
-            this.sendersSockets[relayId][namespace] = []
+            this.sendersSockets[relayId][namespace] = {}
         }
-        this.sendersSockets[relayId][namespace].push(socket)
+        const {encryptionId:deviceId} = socket.handshake.auth
+        if(!this.sendersSockets[relayId][namespace][deviceId]){
+            this.sendersSockets[relayId][namespace][deviceId] = []
+        }
+        this.sendersSockets[relayId][namespace][deviceId].push(socket)
         const newSocketMessage:RelayMessageNewSocket = {
             type:'socketNew',
             namespace,
-            deviceId:socket.handshake.auth.encryptionId
+            deviceId
         } 
         this.receiversSockets[relayId].emit('relay:internal:newSocket',newSocketMessage)
         socket.onAny((eventName:string,eventBody:any,callback:(err:any,res:any)=>void) =>{
@@ -76,7 +82,8 @@ export default class Handler {
                 eventBody,
                 namespace,
                 queryCallbackId:queryId,
-                socketCallbackId:socket.id
+                socketCallbackId:socket.id,
+                deviceId
             }
             if(!this.socketCallbacks[socket.id]){
                 this.socketCallbacks[socket.id] = {}
@@ -85,9 +92,9 @@ export default class Handler {
             this.receiversSockets[relayId].emit('relay:internal:messageForward',message)
         })
         socket.on('disconnect',() => {
-            const socketIndex = this.sendersSockets[relayId][namespace].indexOf(socket)
+            const socketIndex = this.sendersSockets[relayId][namespace][deviceId].indexOf(socket)
             if(socketIndex !== -1){
-                this.sendersSockets[relayId][namespace].splice(socketIndex,1)
+                this.sendersSockets[relayId][namespace][deviceId].splice(socketIndex,1)
             }
             delete this.socketCallbacks[socket.id]
         })
@@ -96,12 +103,17 @@ export default class Handler {
 
     addReceiverSocket(socket:Socket){
         socket.once("hybridRelayToken", async (body, ack:(sockets:ExistingSockets[])=>void) => {
-            if(!body || !body.token || !body.id){
-                socket.emit("relay:internal:error",{type:'error',message:''})
+            if(!body || !body.token || !body.id || !body.version){
+                socket.emit("relay:internal:error",{type:'error',message:'invalid token'})
                 socket.disconnect()
                 return
             }
-            const {token,id:relayId} = body
+            const {token,id:relayId,version} = body
+            if(this.currentVersion !== version){
+                socket.emit("relay:internal:error",{type:'error',message:'invalid version'})
+                socket.disconnect()
+                return
+            }
             try{
                 const ok = await this.auth.validateToken(token,relayId)
                 if(!ok){
@@ -110,12 +122,14 @@ export default class Handler {
                     return
                 }
                 const connectedSockets:ExistingSockets[] = []
-                Object.entries(this.sendersSockets[relayId] || {}).forEach(([namespace,sockets])=>{
-                    sockets.forEach(socket =>{
-                        connectedSockets.push({
-                            deviceId:socket.handshake.auth.encryptionId,
-                            namespace
-                        })
+                Object.entries(this.sendersSockets[relayId] || {}).forEach(([namespace,socketDevices])=>{
+                    Object.entries(socketDevices || {}).forEach(([deviceId,sockets]) =>{
+                        if(sockets.find(socket => socket.connected)){
+                            connectedSockets.push({
+                                deviceId,
+                                namespace
+                            })
+                        }
                     })
                 })
                 ack(connectedSockets)
@@ -136,18 +150,22 @@ export default class Handler {
                 return
             }
             //console.log(`got backward on ${body.namespace} for ${body.eventName}`)
-            if(!this.sendersSockets[relayId] || !this.sendersSockets[relayId][body.namespace]){
+            if(
+                !this.sendersSockets[relayId] || 
+                !this.sendersSockets[relayId][body.namespace] ||
+                !this.sendersSockets[relayId][body.namespace][body.deviceId]
+            ){
                 return
             }
             // TODO counter and notify if no one is listening
             let sent = 0
-            for(let i = 0;i<this.sendersSockets[relayId][body.namespace].length;i++){
-                if(!this.sendersSockets[relayId][body.namespace][i]){
+            for(let i = 0;i<this.sendersSockets[relayId][body.namespace][body.deviceId].length;i++){
+                if(!this.sendersSockets[relayId][body.namespace][body.deviceId][i]){
                     console.log("nopping")
                     return
                 }
                 //console.log("emitting to client: "+body.eventName)
-                this.sendersSockets[relayId][body.namespace][i].emit(body.eventName,body.eventBody)
+                this.sendersSockets[relayId][body.namespace][body.deviceId][i].emit(body.eventName,body.eventBody)
                 sent++
             }
             
