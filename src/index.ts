@@ -85,8 +85,7 @@ app.use(function (req, res, next) {
 
 app.post('/reservedHybridRelayCreate',async (req,res) => {
     try {
-        const relayId = v1()
-        const token = await auth.generateToken(relayId)
+        const [token,relayId] = await auth.generateToken()
         res.json({token,relayId})
     }catch(e){
         console.error(e)

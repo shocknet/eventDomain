@@ -127,19 +127,18 @@ app.use(function (req, res, next) {
     });
 });
 app.post('/reservedHybridRelayCreate', function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-    var relayId, token, e_1;
-    return __generator(this, function (_a) {
-        switch (_a.label) {
+    var _a, token, relayId, e_1;
+    return __generator(this, function (_b) {
+        switch (_b.label) {
             case 0:
-                _a.trys.push([0, 2, , 3]);
-                relayId = uuid_1.v1();
-                return [4 /*yield*/, auth.generateToken(relayId)];
+                _b.trys.push([0, 2, , 3]);
+                return [4 /*yield*/, auth.generateToken()];
             case 1:
-                token = _a.sent();
+                _a = _b.sent(), token = _a[0], relayId = _a[1];
                 res.json({ token: token, relayId: relayId });
                 return [3 /*break*/, 3];
             case 2:
-                e_1 = _a.sent();
+                e_1 = _b.sent();
                 console.error(e_1);
                 res.sendStatus(500);
                 return [3 /*break*/, 3];
