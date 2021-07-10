@@ -48,13 +48,23 @@ app.use(function (req, res, next) {
     }
     const headers = {...req.headers}
     const body = {...req.body}
-    if(!headers['x-shock-hybrid-relay-id-x']){
-        console.log("missing header")
-        return res.sendStatus(400)
+    let relayId = ""
+    if(headers['x-shock-hybrid-relay-id-x']){
+        const relayIdHeader = headers['x-shock-hybrid-relay-id-x']
+        if(typeof relayIdHeader !== 'string'){
+            relayId = relayIdHeader[0]
+        } else {
+            relayId = relayIdHeader
+        }
+    }else if(req.query["x-shock-hybrid-relay-id-x"]){
+        const relayIdParam = req.query['x-shock-hybrid-relay-id-x']
+        if(typeof relayIdParam === 'string'){
+            relayId = relayIdParam
+        }
     }
-    let relayId = headers['x-shock-hybrid-relay-id-x']
-    if(typeof relayId !== 'string'){
-        relayId = relayId[0]
+    if(relayId === ""){
+        console.log("missing relayId")
+        return res.sendStatus(400)
     }
     const requestId = v1()
     const request:httpRequestInfo = {

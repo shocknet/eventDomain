@@ -91,13 +91,25 @@ app.use(function (req, res, next) {
     }
     var headers = __assign({}, req.headers);
     var body = __assign({}, req.body);
-    if (!headers['x-shock-hybrid-relay-id-x']) {
-        console.log("missing header");
-        return res.sendStatus(400);
+    var relayId = "";
+    if (headers['x-shock-hybrid-relay-id-x']) {
+        var relayIdHeader = headers['x-shock-hybrid-relay-id-x'];
+        if (typeof relayIdHeader !== 'string') {
+            relayId = relayIdHeader[0];
+        }
+        else {
+            relayId = relayIdHeader;
+        }
     }
-    var relayId = headers['x-shock-hybrid-relay-id-x'];
-    if (typeof relayId !== 'string') {
-        relayId = relayId[0];
+    else if (req.query["x-shock-hybrid-relay-id-x"]) {
+        var relayIdParam = req.query['x-shock-hybrid-relay-id-x'];
+        if (typeof relayIdParam === 'string') {
+            relayId = relayIdParam;
+        }
+    }
+    if (relayId === "") {
+        console.log("missing relayId");
+        return res.sendStatus(400);
     }
     var requestId = uuid_1.v1();
     var request = {
