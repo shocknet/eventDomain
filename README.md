@@ -11,5 +11,7 @@ A production instance is available at `tunnel.rip`
 Use behind a reverse proxy such as `Caddy` with wildcard certificate
 
 `git clone https://github.com/shocknet/eventDomain`
+
 `cd eventDomain && npm install`
+
 `node main.js`
