@@ -31,7 +31,7 @@ example.com, *.example.com {
   }
 }
 ```
-Remember to create `/var/log/caddy/access.log` file and give it right permissions,
+Remember to create `/var/log/caddy/access.log` file and give it write permissions,
 and also create a custom SSL certificate using `certbot` as described in the section below.
 #### Wildcard SSL
 To use `eventDomain` service behind SSL you need to also issue certificates for
