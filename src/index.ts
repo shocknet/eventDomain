@@ -8,6 +8,7 @@ import SocketsHandler from './sockets'
 import Auth from './auth'
 import Health from './health'
 import { httpRequestInfo } from './types'
+import path from 'path'
 
 const CURRENT_ED_VERSION = 1
 const auth = new Auth()
@@ -107,6 +108,15 @@ app.get('/reservedHybridRelayHealthz',async (req,res) => {
     try {
         const stats = await healthHandler.readStoredStatuses()
         res.json(stats)
+    }catch(e){
+        console.error(e)
+        res.sendStatus(500)
+    }
+})
+
+app.get('/reservedHybridRelayHealthzUI',async (req,res) => {
+    try {
+        res.sendFile(path.join(__dirname, './public/index.html'))
     }catch(e){
         console.error(e)
         res.sendStatus(500)
