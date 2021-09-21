@@ -5,10 +5,11 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "rimraf ./build && tsc",
-    "start": "tsc && ts-node ./src/index.ts",
+    "build": "rimraf ./build && tsc && npm run copy-files",
+    "start": "tsc &&  ts-node ./src/index.ts",
     "start:force": "ts-node ./src/index.ts",
-    "start:prod": "npm run build && node build/index.js"
+    "start:prod": "npm run build && node build/index.js",
+    "copy-files": "copyfiles -u 1 src/public/*.html src/public/*.css build/"
   },
   "author": "",
   "license": "ISC",
@@ -27,6 +28,7 @@
     "@types/jsonwebtoken": "^8.5.1",
     "@types/node-persist": "^3.1.1",
     "@types/uuid": "^8.3.0",
+    "copyfiles": "^2.4.1",
     "nodemon": "^2.0.7",
     "rimraf": "^3.0.2",
     "ts-node": "^10.0.0",

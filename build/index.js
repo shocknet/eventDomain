@@ -59,6 +59,7 @@ var socket_io_msgpack_parser_1 = __importDefault(require("socket.io-msgpack-pars
 var sockets_1 = __importDefault(require("./sockets"));
 var auth_1 = __importDefault(require("./auth"));
 var health_1 = __importDefault(require("./health"));
+var path_1 = __importDefault(require("path"));
 var CURRENT_ED_VERSION = 1;
 var auth = new auth_1.default();
 var socketsHandler = new sockets_1.default(auth, CURRENT_ED_VERSION);
@@ -176,6 +177,18 @@ app.get('/reservedHybridRelayHealthz', function (req, res) { return __awaiter(vo
                 return [3 /*break*/, 3];
             case 3: return [2 /*return*/];
         }
+    });
+}); });
+app.get('/reservedHybridRelayHealthzUI', function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
+    return __generator(this, function (_a) {
+        try {
+            res.sendFile(path_1.default.join(__dirname, './public/index.html'));
+        }
+        catch (e) {
+            console.error(e);
+            res.sendStatus(500);
+        }
+        return [2 /*return*/];
     });
 }); });
 var httpServer = http_1.default.createServer(app);
